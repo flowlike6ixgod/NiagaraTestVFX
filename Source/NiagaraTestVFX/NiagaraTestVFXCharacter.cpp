@@ -7,6 +7,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ANiagaraTestVFXCharacter
@@ -47,6 +50,11 @@ ANiagaraTestVFXCharacter::ANiagaraTestVFXCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComp"));
+	NiagaraComponent->SetupAttachment(RootComponent);
+
+	bShieldIsEnabled = false;
+	
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -60,7 +68,9 @@ void ANiagaraTestVFXCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-
+	PlayerInputComponent->BindAction("Shield", IE_Pressed, this, &ANiagaraTestVFXCharacter::EnableShield);
+	PlayerInputComponent->BindAction("Shield", IE_Released, this, &ANiagaraTestVFXCharacter::DisableShield);
+	
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ANiagaraTestVFXCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ANiagaraTestVFXCharacter::MoveRight);
 
@@ -75,6 +85,14 @@ void ANiagaraTestVFXCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ANiagaraTestVFXCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ANiagaraTestVFXCharacter::TouchStopped);
+
+
+}
+
+void ANiagaraTestVFXCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
 }
 
 void ANiagaraTestVFXCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -85,6 +103,29 @@ void ANiagaraTestVFXCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVect
 void ANiagaraTestVFXCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	StopJumping();
+}
+
+void ANiagaraTestVFXCharacter::EnableShield()
+{
+	if (!bShieldIsEnabled)
+	{
+		//NiagaraComponent->Activate();
+		const FVector MeshLocation = GetMesh()->GetComponentLocation();
+		const FRotator MeshRotator = GetMesh()->GetComponentRotation();
+		NiagaraComponent->Activate();
+		bShieldIsEnabled = true;
+		GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Orange, FString("Shield Enable"));
+	}
+}
+
+void ANiagaraTestVFXCharacter::DisableShield()
+{
+	if (bShieldIsEnabled)
+	{
+		NiagaraComponent->Deactivate();
+		bShieldIsEnabled = false;
+		GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Orange, FString("Shield Disable"));
+	}
 }
 
 void ANiagaraTestVFXCharacter::TurnAtRate(float Rate)

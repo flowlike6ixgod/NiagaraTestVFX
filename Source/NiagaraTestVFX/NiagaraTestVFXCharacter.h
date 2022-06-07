@@ -18,6 +18,10 @@ class ANiagaraTestVFXCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	UPROPERTY(EditAnywhere, Category = Effects)
+	class UNiagaraComponent* NiagaraComponent;
+	
 public:
 	ANiagaraTestVFXCharacter();
 
@@ -51,9 +55,19 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	void EnableShield();
+
+	void DisableShield();
+	
+protected:
+	
+	bool bShieldIsEnabled;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual void BeginPlay() override;
 	// End of APawn interface
 
 public:
