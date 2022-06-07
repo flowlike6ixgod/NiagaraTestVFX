@@ -49,20 +49,32 @@ protected:
 	 */
 	void LookUpAtRate(float Rate);
 
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
+	/* Called for enable shield */
 	void EnableShield();
 
+	/* Called for disable shield */
 	void DisableShield();
+
+	/* Called for increase movement speed */
+	void StartSprint();
+
+	/* Reduce speed to default value */
+	void StopSprint();
 	
+	void ZoomCamera(float Value);
+
 protected:
-	
+	/* True if shield enabled */
 	bool bShieldIsEnabled;
 
+protected:
+	/* Movement speed modifier */
+	UPROPERTY(EditAnywhere, Category = Movement)
+	float SprintModifier;
+
+	UPROPERTY(EditAnywhere, Category = Camera)
+	float CameraZoomSpeed;
+	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
