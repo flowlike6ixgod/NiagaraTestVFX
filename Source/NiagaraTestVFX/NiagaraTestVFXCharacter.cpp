@@ -19,9 +19,12 @@ ANiagaraTestVFXCharacter::ANiagaraTestVFXCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
+	SetActorTickEnabled(true);
+	PrimaryActorTick.bCanEverTick = true;
+	
 	// set our turn rate for input
 	TurnRateGamepad = 50.f;
-
+	
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -52,11 +55,15 @@ ANiagaraTestVFXCharacter::ANiagaraTestVFXCharacter()
 
 	NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComp"));
 	NiagaraComponent->SetupAttachment(RootComponent);
-	NiagaraComponent->Deactivate();
 
 	bShieldIsEnabled = false;
+	ShieldActiveTime = 7.f;
 	SprintModifier = 2.0f;
 	CameraZoomSpeed = 25.f;
+	MaxEnergy = 100.f;
+	CurrentEnergy = MaxEnergy;
+	EnergyRegenPerSecond = 1.f;
+	ShieldEnergyCost = 10.f;
 	
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -72,7 +79,6 @@ void ANiagaraTestVFXCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction("Shield", IE_Pressed, this, &ANiagaraTestVFXCharacter::EnableShield);
-	PlayerInputComponent->BindAction("Shield", IE_Released, this, &ANiagaraTestVFXCharacter::DisableShield);
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ANiagaraTestVFXCharacter::StartSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ANiagaraTestVFXCharacter::StopSprint);
 	
@@ -94,16 +100,52 @@ void ANiagaraTestVFXCharacter::SetupPlayerInputComponent(class UInputComponent* 
 void ANiagaraTestVFXCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Deactivate FX from game start
+	NiagaraComponent->Deactivate();
+}
+
+void ANiagaraTestVFXCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
 	
+	RegenerateEnergy(DeltaTime);
+	DecreaseEnergy(DeltaTime);
+}
+
+void ANiagaraTestVFXCharacter::RegenerateEnergy(float Time)
+{
+	if (!bShieldIsEnabled && CurrentEnergy <= 100.f)
+	{
+		CurrentEnergy = FMath::Min(MaxEnergy, CurrentEnergy + EnergyRegenPerSecond * Time);
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, FString::SanitizeFloat(CurrentEnergy));
+	}
+}
+
+void ANiagaraTestVFXCharacter::DecreaseEnergy(float Time)
+{
+	if (bShieldIsEnabled)
+	{
+		const float DecreasePerSecond = 5.f;
+		CurrentEnergy = FMath::Min(MaxEnergy, CurrentEnergy - (ShieldEnergyCost / ShieldActiveTime) * Time);
+	}
 }
 
 void ANiagaraTestVFXCharacter::EnableShield()
 {
-	if (!bShieldIsEnabled)
+	if (!bShieldIsEnabled && CurrentEnergy >= ShieldEnergyCost)
 	{
 		NiagaraComponent->Activate();
+		
 		bShieldIsEnabled = true;
-		GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Orange, FString("Shield Enable"));
+		
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, FString("Shield Enable"));
+		
+		FTimerHandle ShieldTimer;
+		
+		GetWorldTimerManager().SetTimer(ShieldTimer, this, &ANiagaraTestVFXCharacter::DisableShield, ShieldActiveTime, false);
+
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, FString::SanitizeFloat(CurrentEnergy));
 	}
 }
 
@@ -140,7 +182,6 @@ void ANiagaraTestVFXCharacter::ZoomCamera(float Value)
 		}
 	}
 }
-
 
 void ANiagaraTestVFXCharacter::TurnAtRate(float Rate)
 {

@@ -20,6 +20,9 @@ class ANiagaraTestVFXCharacter : public ACharacter
 	class UCameraComponent* FollowCamera;
 
 	UPROPERTY(EditAnywhere, Category = Effects)
+	class UNiagaraSystem* TrailSystem;
+
+	UPROPERTY(EditAnywhere, Category = Effects)
 	class UNiagaraComponent* NiagaraComponent;
 	
 public:
@@ -62,10 +65,33 @@ protected:
 	void StopSprint();
 	
 	void ZoomCamera(float Value);
+	
+public:
+	
+	/* Return max player energy */
+	UFUNCTION(BlueprintCallable)
+	float GetMaxEnergy() { return MaxEnergy; };
+
+	/* Return current player energy */
+	UFUNCTION(BlueprintCallable)
+	float GetCurrentEnergy() { return CurrentEnergy; };
+
+	/* Is shield enabled? */
+	UFUNCTION(BlueprintCallable)
+	bool IsShieldEnabled() { return bShieldIsEnabled; };
+
+public:
+	/* Regenerates energy */
+	void RegenerateEnergy(float Time);
+
+	void DecreaseEnergy(float Time);
 
 protected:
-	/* True if shield enabled */
+	/* Is shield enabled? */
 	bool bShieldIsEnabled;
+
+	/* Active shield time */
+	float ShieldActiveTime;
 
 protected:
 	/* Movement speed modifier */
@@ -74,12 +100,28 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 	float CameraZoomSpeed;
+
+	///// Energy /////
+	UPROPERTY(EditAnywhere, Category = Energy)
+	float MaxEnergy;
+
+	UPROPERTY(EditAnywhere, Category = Energy)
+	float CurrentEnergy;
+
+	UPROPERTY(EditAnywhere, Category = Energy)
+	float EnergyRegenPerSecond;
+
+	UPROPERTY(EditAnywhere, Category = Energy)
+	float ShieldEnergyCost;
 	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void BeginPlay() override;
+	
+	virtual void Tick(float DeltaTime) override;
+	
 	// End of APawn interface
 
 public:
